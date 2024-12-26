@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Üyeler Yönetimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            margin: 0 auto;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .table-container {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table thead {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .btn-success {
+            margin-bottom: 10px;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('navbar') %>
+
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Üyeler Yönetimi</h1>
+
+        <!-- Grafikler -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title text-center">Cinsiyet Dağılımı</h5>
+                        <div class="chart-container">
+                            <canvas id="genderChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title text-center">Şubelere Göre Üye Sayısı</h5>
+                        <div class="chart-container">
+                            <canvas id="branchChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtreleme ve Tablo -->
+        <div class="table-container">
+            <form method="GET" action="/analytics/uyeler" class="row g-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>Filtrele</h3>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="uyeAdSoyad" class="form-control" placeholder="Ad Soyad" value="<%= filters.uyeAdSoyad || '' %>">
+                </div>
+                <div class="col-md-3">
+                    <select name="subeAd" class="form-select">
+                        <option value="">Şube Seçin</option>
+                        <% subeler.forEach(sube => { %>
+                            <option value="<%= sube.sube_ad %>" <%= filters.subeAd === sube.sube_ad ? 'selected' : '' %>><%= sube.sube_ad %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="cinsiyetAd" class="form-select">
+                        <option value="">Cinsiyet Seçin</option>
+                        <% cinsiyetler.forEach(cinsiyet => { %>
+                            <option value="<%= cinsiyet.cinsiyet_ad %>" <%= filters.cinsiyetAd === cinsiyet.cinsiyet_ad ? 'selected' : '' %>><%= cinsiyet.cinsiyet_ad %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="kursAd" class="form-select">
+                        <option value="">Kurs Seçin</option>
+                        <% kurslar.forEach(kurs => { %>
+                            <option value="<%= kurs.kurs_ad %>" <%= filters.kursAd === kurs.kurs_ad ? 'selected' : '' %>><%= kurs.kurs_ad %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-md-3 filter-actions">
+                    <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+                    <a href="/analytics/uyeler" class="btn btn-secondary w-100">Temizle</a>
+                </div>
+            </form>
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th>Şube</th>
+                        <th>Cinsiyet</th>
+                        <th>Kurslar</th>
+                        <th>Kayıt Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% members.forEach(member => { %>
+                        <tr>
+                            <td><%= member.uye_ad %></td>
+                            <td><%= member.uye_soyad %></td>
+                            <td><%= member.sube_ad %></td>
+                            <td><%= member.cinsiyet_ad %></td>
+                            <td><%= member.kurslar || 'Kayıtlı kurs yok' %></td>
+                            <td><%= member.kayit_tarih.toISOString().slice(0, 10) %></td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editMemberModal-<%= member.uye_id %>">Düzenle</button>
+                                <form action="/analytics/uyeler/sil/<%= member.uye_id %>" method="POST" class="d-inline">
+                                    <button class="btn btn-danger btn-sm" type="submit">Sil</button>
+                                </form>
+                            </td>
+                        </tr>
+
+
+                        <!-- Üye Düzenleme Modal -->
+                        <div class="modal fade" id="editMemberModal-<%= member.uye_id %>" tabindex="-1" aria-labelledby="editMemberLabel-<%= member.uye_id %>" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form action="/analytics/uyeler/duzenle/<%= member.uye_id %>" method="POST">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="editMemberLabel-<%= member.uye_id %>">Üye Düzenle</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="editUyeAd-<%= member.uye_id %>" class="form-label">Üye Adı</label>
+                                                <input type="text" class="form-control" id="editUyeAd-<%= member.uye_id %>" name="uyeAd" value="<%= member.uye_ad %>" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editUyeSoyad-<%= member.uye_id %>" class="form-label">Üye Soyadı</label>
+                                                <input type="text" class="form-control" id="editUyeSoyad-<%= member.uye_id %>" name="uyeSoyad" value="<%= member.uye_soyad %>" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editSubeId-<%= member.uye_id %>" class="form-label">Şube</label>
+                                                <select id="editSubeId-<%= member.uye_id %>" name="subeId" class="form-select" required>
+                                                    <% subeler.forEach(sube => { %>
+                                                        <option value="<%= sube.sube_id %>" <%= sube.sube_ad === member.sube_ad ? 'selected' : '' %>><%= sube.sube_ad %></option>
+                                                    <% }); %>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editCinsiyetId-<%= member.uye_id %>" class="form-label">Cinsiyet</label>
+                                                <select id="editCinsiyetId-<%= member.uye_id %>" name="cinsiyetId" class="form-select" required>
+                                                    <% cinsiyetler.forEach(cinsiyet => { %>
+                                                        <option value="<%= cinsiyet.cinsiyet_id %>" <%= cinsiyet.cinsiyet_ad === member.cinsiyet_ad ? 'selected' : '' %>><%= cinsiyet.cinsiyet_ad %></option>
+                                                    <% }); %>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editKurslar-<%= member.uye_id %>" class="form-label">Kurslar</label>
+                                                <select id="editKurslar-<%= member.uye_id %>" name="kurslar[]" class="form-select" multiple>
+                                                    <% kurslar.forEach(kurs => { %>
+                                                        <option value="<%= kurs.kurs_id %>" <%= member.kurslar && member.kurslar.includes(kurs.kurs_ad) ? 'selected' : '' %>>
+                                                            <%= kurs.kurs_ad %>
+                                                        </option>
+                                                    <% }); %>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editKayitTarih-<%= member.uye_id %>" class="form-label">Kayıt Tarihi</label>
+                                                <input type="date" class="form-control" id="editKayitTarih-<%= member.uye_id %>" name="kayitTarih" value="<%= member.kayit_tarih.toISOString().slice(0, 10) %>" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                                            <button type="submit" class="btn btn-primary">Güncelle</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </tbody>
+            </table>
+
+            <div class="row">
+                        <!-- Üye Ekle Butonu -->
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addMemberModal">+ Üye Ekle</button>
+            </div>
+
+        </div>
+
+        <!-- Üye Ekleme Modal -->
+        <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="/analytics/uyeler/ekle" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addMemberLabel">Üye Ekle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="uyeAd" class="form-label">Üye Adı</label>
+                                <input type="text" class="form-control" id="uyeAd" name="uyeAd" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="uyeSoyad" class="form-label">Üye Soyadı</label>
+                                <input type="text" class="form-control" id="uyeSoyad" name="uyeSoyad" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="subeId" class="form-label">Şube</label>
+                                <select id="subeId" name="subeId" class="form-select" required>
+                                    <option value="" disabled selected>Şube Seçin</option>
+                                    <% subeler.forEach(sube => { %>
+                                        <option value="<%= sube.sube_id %>"><%= sube.sube_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="cinsiyetId" class="form-label">Cinsiyet</label>
+                                <select id="cinsiyetId" name="cinsiyetId" class="form-select" required>
+                                    <option value="" disabled selected>Cinsiyet Seçin</option>
+                                    <% cinsiyetler.forEach(cinsiyet => { %>
+                                        <option value="<%= cinsiyet.cinsiyet_id %>"><%= cinsiyet.cinsiyet_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="kurslar" class="form-label">Kurslar</label>
+                                <select id="kurslar" name="kurslar[]" class="form-select" multiple>
+                                    <% kurslar.forEach(kurs => { %>
+                                        <option value="<%= kurs.kurs_id %>"><%= kurs.kurs_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="kayitTarih" class="form-label">Kayıt Tarihi</label>
+                                <input type="date" class="form-control" id="kayitTarih" name="kayitTarih" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                            <button type="submit" class="btn btn-primary">Ekle</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gender Chart
+        const genderData = <%- JSON.stringify(genderData) %>;
+        new Chart(document.getElementById('genderChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: genderData.labels,
+                datasets: [{
+                    data: genderData.values,
+                    backgroundColor: ['#FF6384', '#36A2EB'],
+                }]
+            }
+        });
+
+        // Branch Chart
+        const branchData = <%- JSON.stringify(branchData) %>;
+        new Chart(document.getElementById('branchChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: branchData.labels,
+                datasets: [{
+                    label: 'Üye Sayısı',
+                    data: branchData.values,
+                    backgroundColor: '#FFCE56',
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

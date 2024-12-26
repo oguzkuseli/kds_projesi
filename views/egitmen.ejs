@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eğitmen Bilgileri</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa; /* Hafif gri arka plan */
+        }
+        h1, h3 {
+            color: #343a40; /* Daha koyu bir başlık rengi */
+        }
+        .table-container {
+            background-color: #ffffff; /* Beyaz zemin */
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Hafif gölgelendirme */
+            padding: 15px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Butona hafif gölge */
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .chart-container {
+            background-color: #ffffff; /* Beyaz zemin */
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Grafik alanı gölgelendirme */
+            padding: 20px;
+            width: 100%; /* Varsayılan genişlik */
+            height: 400px; /* Sabit bir yükseklik */
+        }
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Modal kutusuna gölge */
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <%- include('navbar') %>
+
+    <div class="container mt-4">
+        <h1 class="mb-4 text-center">Eğitmen Bilgileri</h1>
+
+        <!-- Grafik Alanı -->
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-12 mb-4 text-center">
+                <h4>Eğitmen Maaşları</h4>
+                <div class="chart-container">
+                    <canvas id="salaryChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12 mb-4 text-center">
+                <h4>Şube Bazında Eğitmen Sayısı</h4>
+                <div class="chart-container">
+                    <canvas id="trainerCountChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-12 mb-4 text-center">
+                <h4>Uzmanlık Bazında Ortalama Maaş</h4>
+                <div class="chart-container">
+                    <canvas id="avgSalaryChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12 mb-4 text-center">
+                <h4>Şube Bazında Maaş Toplamı</h4>
+                <div class="chart-container">
+                    <canvas id="totalSalaryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtreleme ve Eğitmen Ekle Butonları -->
+        <div class="row">
+            <div class="col-12">
+                <div class="table-container mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>Filtrele</h3>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" id="filterName" class="form-control" placeholder="Ad Soyad ile Ara">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <select id="filterSpecialization" class="form-select">
+                                <option value="">Uzmanlık Seç</option>
+                                <% uzmanliklar.forEach(uzmanlik => { %>
+                                    <option value="<%= uzmanlik.uzmanlik_ad %>"><%= uzmanlik.uzmanlik_ad %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <select id="filterBranch" class="form-select">
+                                <option value="">Şube Seç</option>
+                                <% subeler.forEach(sube => { %>
+                                    <option value="<%= sube.sube_ad %>"><%= sube.sube_ad %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button id="applyFilter" class="btn btn-primary me-2">Filtrele</button>
+                        <button id="clearFilter" class="btn btn-secondary">Temizle</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Eğitmen Tablosu -->
+        <div class="row mt-4">
+            <div class="col-12 table-container">
+                <h3>Eğitmen Tablosu</h3>
+                
+                <table class="table table-bordered table-hover mt-3" id="trainerTable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Ad Soyad</th>
+                            <th>Uzmanlık</th>
+                            <th>Şube</th>
+                            <th>Maaş</th>
+                            <th>Maaş Durumu</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% trainers.forEach(trainer => { %>
+                            <tr>
+                                <td><%= trainer.egitmen_ad %> <%= trainer.egitmen_soyad %></td>
+                                <td><%= trainer.uzmanlik_ad %></td>
+                                <td><%= trainer.sube_ad %></td>
+                                <td><%= trainer.maas %> ₺</td>
+                                <td class="<%= trainer.maasDurumu.includes('Yüksek') ? 'bg-danger text-white' : '' %>">
+                                    <%= trainer.maasDurumu %>
+                                </td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm btn-spacing" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editTrainerModal" 
+                                            data-id="<%= trainer.egitmen_id %>"
+                                            data-ad="<%= trainer.egitmen_ad %>"
+                                            data-soyad="<%= trainer.egitmen_soyad %>"
+                                            data-maas="<%= trainer.maas %>"
+                                            data-sube="<%= trainer.sube_id %>"
+                                            data-uzmanlik="<%= trainer.uzmanlik_id %>">
+                                        Düzenle
+                                    </button>
+                                    <form method="POST" action="/analytics/egitmen/delete" style="display: inline-block;">
+                                        <input type="hidden" name="egitmenId" value="<%= trainer.egitmen_id %>">
+                                        <button type="submit" class="btn btn-danger btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+                <div class="row">
+
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTrainerModal">+ Eğitmen Ekle</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Eğitmen Ekle Modal -->
+        <div class="modal fade" id="addTrainerModal" tabindex="-1" aria-labelledby="addTrainerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="/analytics/egitmen/add">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addTrainerModalLabel">Eğitmen Ekle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="addTrainerName" class="form-label">Ad</label>
+                                <input type="text" class="form-control" id="addTrainerName" name="egitmenAd" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addTrainerLastName" class="form-label">Soyad</label>
+                                <input type="text" class="form-control" id="addTrainerLastName" name="egitmenSoyad" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addTrainerSalary" class="form-label">Maaş</label>
+                                <input type="number" class="form-control" id="addTrainerSalary" name="maas" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addTrainerBranch" class="form-label">Şube</label>
+                                <select class="form-select" id="addTrainerBranch" name="subeId" required>
+                                    <% subeler.forEach(sube => { %>
+                                        <option value="<%= sube.sube_id %>"><%= sube.sube_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addTrainerSpecialization" class="form-label">Uzmanlık</label>
+                                <select class="form-select" id="addTrainerSpecialization" name="uzmanlikId" required>
+                                    <% uzmanliklar.forEach(uzmanlik => { %>
+                                        <option value="<%= uzmanlik.uzmanlik_id %>"><%= uzmanlik.uzmanlik_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                            <button type="submit" class="btn btn-success">Ekle</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Düzenle Modal -->
+        <div class="modal fade" id="editTrainerModal" tabindex="-1" aria-labelledby="editTrainerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="/analytics/egitmen/edit">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editTrainerModalLabel">Eğitmeni Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="egitmenId" id="editTrainerId">
+                            <div class="mb-3">
+                                <label for="editTrainerName" class="form-label">Ad</label>
+                                <input type="text" class="form-control" id="editTrainerName" name="egitmenAd" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editTrainerLastName" class="form-label">Soyad</label>
+                                <input type="text" class="form-control" id="editTrainerLastName" name="egitmenSoyad" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editTrainerSalary" class="form-label">Maaş</label>
+                                <input type="number" class="form-control" id="editTrainerSalary" name="maas" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editTrainerBranch" class="form-label">Şube</label>
+                                <select class="form-select" id="editTrainerBranch" name="subeId" required>
+                                    <% subeler.forEach(sube => { %>
+                                        <option value="<%= sube.sube_id %>"><%= sube.sube_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editTrainerSpecialization" class="form-label">Uzmanlık</label>
+                                <select class="form-select" id="editTrainerSpecialization" name="uzmanlikId" required>
+                                    <% uzmanliklar.forEach(uzmanlik => { %>
+                                        <option value="<%= uzmanlik.uzmanlik_id %>"><%= uzmanlik.uzmanlik_ad %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                            <button type="submit" class="btn btn-primary">Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editModal = document.getElementById('editTrainerModal');
+    
+            // Modal açıldığında verileri doldur
+            editModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Modal'ı açan düğme
+                const trainerId = button.getAttribute('data-id');
+                const trainerAd = button.getAttribute('data-ad');
+                const trainerSoyad = button.getAttribute('data-soyad');
+                const trainerMaas = button.getAttribute('data-maas');
+                const trainerSube = button.getAttribute('data-sube');
+                const trainerUzmanlik = button.getAttribute('data-uzmanlik');
+    
+                // Modal içindeki form elemanlarını doldur
+                document.getElementById('editTrainerId').value = trainerId;
+                document.getElementById('editTrainerName').value = trainerAd;
+                document.getElementById('editTrainerLastName').value = trainerSoyad;
+                document.getElementById('editTrainerSalary').value = trainerMaas;
+                document.getElementById('editTrainerBranch').value = trainerSube;
+                document.getElementById('editTrainerSpecialization').value = trainerUzmanlik;
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterName = document.getElementById('filterName');
+            const filterSpecialization = document.getElementById('filterSpecialization');
+            const filterBranch = document.getElementById('filterBranch');
+            const trainerTable = document.getElementById('trainerTable');
+            const rows = trainerTable.querySelectorAll('tbody tr');
+            const applyFilterButton = document.getElementById('applyFilter');
+            const clearFilterButton = document.getElementById('clearFilter');
+
+            // Filtreleme işlevi
+            function filterTable() {
+                const nameValue = filterName.value.toLowerCase();
+                const specializationValue = filterSpecialization.value.toLowerCase();
+                const branchValue = filterBranch.value.toLowerCase();
+
+                rows.forEach(row => {
+                    const name = row.cells[0].textContent.toLowerCase();
+                    const specialization = row.cells[1].textContent.toLowerCase();
+                    const branch = row.cells[2].textContent.toLowerCase();
+
+                    if (
+                        (name.includes(nameValue) || nameValue === '') &&
+                        (specialization.includes(specializationValue) || specializationValue === '') &&
+                        (branch.includes(branchValue) || branchValue === '')
+                    ) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
+            // Filtre temizleme işlevi
+            function clearFilters() {
+                filterName.value = '';
+                filterSpecialization.value = '';
+                filterBranch.value = '';
+                filterTable(); // Tablonun varsayılan haline dönmesi için filtreyi uygula
+            }
+
+            // Butonlara işlev atama
+            applyFilterButton.addEventListener('click', filterTable);
+            clearFilterButton.addEventListener('click', clearFilters);
+        });
+    </script>
+    <script>
+        const salaryData = <%- JSON.stringify(salaryData) %>;
+        new Chart(document.getElementById('salaryChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: salaryData.labels,
+                datasets: [{
+                    label: 'Maaş (₺)',
+                    data: salaryData.values,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        const trainerCountData = <%- JSON.stringify(trainerCountData) %>;
+        new Chart(document.getElementById('trainerCountChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: trainerCountData.labels,
+                datasets: [{
+                    label: 'Eğitmen Sayısı',
+                    data: trainerCountData.values,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const avgSalaryData = <%- JSON.stringify(avgSalaryData) %>;
+        new Chart(document.getElementById('avgSalaryChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: avgSalaryData.labels,
+                datasets: [{
+                    label: 'Ortalama Maaş (₺)',
+                    data: avgSalaryData.values,
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        const totalSalaryData = <%- JSON.stringify(totalSalaryData) %>;
+        new Chart(document.getElementById('totalSalaryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: totalSalaryData.labels,
+                datasets: [{
+                    label: 'Toplam Maaş (₺)',
+                    data: totalSalaryData.values,
+                    backgroundColor: [
+                        'rgba(255, 159, 64, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(54, 162, 235, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
